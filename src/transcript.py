@@ -9,11 +9,7 @@ from youtube_transcript_api import (
 def get_youtube_transcript(video_id: str) -> str:
     """
     Retrieves the transcript for a given YouTube video ID using YouTube Transcript API.
-    
-    Tries:
-    1. Direct English transcripts ('en', 'en-US', 'en-GB').
-    2. Auto-generated or translated transcripts into English.
-    3. Any available transcript track as fallback.
+    Supports both youtube-transcript-api v1.x+ and legacy v0.x API versions.
     
     Args:
         video_id (str): The 11-character YouTube video ID.
@@ -25,27 +21,57 @@ def get_youtube_transcript(video_id: str) -> str:
         raise ValueError("Video ID cannot be empty.")
         
     try:
-        # Fetch available transcripts list
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        
-        # Priority 1: Try finding explicit English transcript
+        # Instantiate or reference YouTubeTranscriptApi
         try:
-            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
-        except NoTranscriptFound:
-            # Priority 2: Translate the first available transcript to English if translatable
-            first_transcript = next(iter(transcript_list))
-            if first_transcript.is_translatable:
-                transcript = first_transcript.translate('en')
-            else:
-                transcript = first_transcript
+            ytt = YouTubeTranscriptApi()
+        except TypeError:
+            ytt = YouTubeTranscriptApi
 
-        # Fetch transcript content list of entries
-        transcript_data = transcript.fetch()
-        
-        # Combine text segments into a single string
-        full_text = " ".join([entry['text'] for entry in transcript_data])
-        
-        # Clean the extracted transcript
+        transcript_data = None
+
+        # Method 1: Try transcript listing & English translation
+        if hasattr(ytt, "list") or hasattr(YouTubeTranscriptApi, "list_transcripts"):
+            try:
+                if hasattr(ytt, "list"):
+                    transcript_list = ytt.list(video_id)
+                else:
+                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+                try:
+                    transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
+                except Exception:
+                    first_transcript = next(iter(transcript_list))
+                    if hasattr(first_transcript, "is_translatable") and first_transcript.is_translatable:
+                        transcript = first_transcript.translate('en')
+                    else:
+                        transcript = first_transcript
+
+                transcript_data = transcript.fetch()
+            except Exception:
+                transcript_data = None
+
+        # Method 2: Direct fetch or get_transcript fallback
+        if transcript_data is None:
+            if hasattr(ytt, "fetch"):
+                transcript_data = ytt.fetch(video_id)
+            elif hasattr(YouTubeTranscriptApi, "get_transcript"):
+                transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
+            elif hasattr(YouTubeTranscriptApi, "fetch"):
+                transcript_data = YouTubeTranscriptApi.fetch(video_id)
+            else:
+                raise Exception("No transcript fetching method available.")
+
+        # Extract text strings from transcript entries
+        text_segments = []
+        for entry in transcript_data:
+            if isinstance(entry, dict) and 'text' in entry:
+                text_segments.append(entry['text'])
+            elif hasattr(entry, 'text'):
+                text_segments.append(getattr(entry, 'text'))
+            else:
+                text_segments.append(str(entry))
+
+        full_text = " ".join(text_segments)
         cleaned_text = clean_transcript_text(full_text)
         
         if not cleaned_text:
@@ -56,17 +82,11 @@ def get_youtube_transcript(video_id: str) -> str:
     except TranscriptsDisabled:
         raise Exception("Subtitles / Transcripts are disabled for this YouTube video.")
     except NoTranscriptFound:
-        raise Exception("No transcript found for this video in the requested language.")
+        raise Exception("No transcript found for this video.")
     except VideoUnavailable:
         raise Exception("The YouTube video is unavailable, private, or does not exist.")
     except Exception as e:
-        # Final fallback: direct get_transcript call
-        try:
-            transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
-            full_text = " ".join([entry['text'] for entry in transcript_data])
-            return clean_transcript_text(full_text)
-        except Exception:
-            raise Exception(f"Failed to extract transcript: {str(e)}")
+        raise Exception(f"Failed to extract transcript: {str(e)}")
 
 def clean_transcript_text(text: str) -> str:
     """
