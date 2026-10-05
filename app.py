@@ -1,9 +1,26 @@
+"""
+AI-Powered YouTube Video Chatbot
+Main Streamlit Application File
+"""
 import streamlit as st
 import os
 import sys
 
+import importlib
+
 # Add src module to python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+import src.utils
+import src.transcript
+import src.embeddings
+import src.rag
+
+# Force reload of custom src modules on each app run
+importlib.reload(src.utils)
+importlib.reload(src.transcript)
+importlib.reload(src.embeddings)
+importlib.reload(src.rag)
 
 from src.utils import extract_video_id, validate_youtube_url, load_api_key
 from src.transcript import get_youtube_transcript
