@@ -7,7 +7,13 @@ def get_llm(api_key: str, temperature: float = 0.2):
     if not api_key or api_key == "your_gemini_api_key_here":
         raise ValueError("A valid Google Gemini API Key is required.")
         
-    models_to_try = ["gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro"]
+    models_to_try = [
+        "gemini-1.5-flash",
+        "models/gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "models/gemini-1.5-pro",
+        "gemini-2.0-flash"
+    ]
     
     for model_name in models_to_try:
         try:
@@ -20,7 +26,6 @@ def get_llm(api_key: str, temperature: float = 0.2):
         except Exception:
             continue
             
-    # Default fallback
     return ChatGoogleGenerativeAI(
         model="gemini-1.5-flash",
         google_api_key=api_key,

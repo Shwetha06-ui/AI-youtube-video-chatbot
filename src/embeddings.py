@@ -33,6 +33,7 @@ def get_text_chunks(text: str, chunk_size: int = 1000, chunk_overlap: int = 200)
 def create_vector_store(chunks: list, api_key: str):
     """
     Generates Google Gemini embeddings for text chunks and indexes them using FAISS vector store.
+    Tries embedding models in order of compatibility across Gemini API versions.
     
     Args:
         chunks (list[str]): Text chunks.
@@ -47,25 +48,25 @@ def create_vector_store(chunks: list, api_key: str):
     if not api_key or api_key == "your_gemini_api_key_here":
         raise ValueError("A valid Google Gemini API Key is required to create embeddings.")
         
-    try:
-        # Initialize Google Generative AI Embeddings model
-        embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/text-embedding-004",
-            google_api_key=api_key
-        )
-        
-        # Build FAISS vector store from texts
-        vector_store = FAISS.from_texts(texts=chunks, embedding=embeddings)
-        return vector_store
-        
-    except Exception as e:
-        # Fallback embedding model if text-embedding-004 raises an error
+    candidate_models = [
+        "models/embedding-001",
+        "embedding-001",
+        "models/text-embedding-004",
+        "text-embedding-004"
+    ]
+    
+    last_exception = None
+    for model_name in candidate_models:
         try:
             embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/embedding-001",
+                model=model_name,
                 google_api_key=api_key
             )
+            # Build FAISS vector store from texts
             vector_store = FAISS.from_texts(texts=chunks, embedding=embeddings)
             return vector_store
-        except Exception:
-            raise Exception(f"Failed to create FAISS vector store: {str(e)}")
+        except Exception as e:
+            last_exception = e
+            continue
+
+    raise Exception(f"Failed to create FAISS vector store with Gemini embedding models: {str(last_exception)}")
