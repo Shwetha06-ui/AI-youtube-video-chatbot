@@ -49,6 +49,10 @@ def create_vector_store(chunks: list, api_key: str):
         raise ValueError("A valid Google Gemini API Key is required to create embeddings.")
         
     candidate_models = [
+        "models/gemini-embedding-001",
+        "models/gemini-embedding-2",
+        "gemini-embedding-001",
+        "gemini-embedding-2",
         "models/embedding-001",
         "embedding-001",
         "models/text-embedding-004",
