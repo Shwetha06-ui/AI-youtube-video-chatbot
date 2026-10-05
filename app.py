@@ -133,6 +133,14 @@ if process_btn:
         st.error("❌ Google Gemini API Key is missing. Please provide a valid key in the sidebar or .env file.")
     else:
         try:
+            # Reset previous video state to avoid mixing video contexts
+            st.session_state.processed = False
+            st.session_state.vector_store = None
+            st.session_state.transcript = ""
+            st.session_state.summary = ""
+            st.session_state.key_points = []
+            st.session_state.chat_history = []
+
             with st.spinner("1️⃣ Extracting YouTube Video ID..."):
                 video_id = extract_video_id(url_input)
                 st.session_state.video_id = video_id
@@ -153,12 +161,12 @@ if process_btn:
                 st.session_state.key_points = key_points
 
             st.session_state.processed = True
-            st.session_state.chat_history = [] # Reset chat for new video
             st.success("🎉 Video processed successfully! You can now review the summary or ask questions below.")
 
         except Exception as e:
             st.session_state.processed = False
-            st.error(f"❌ Error processing video: {str(e)}")
+            st.session_state.vector_store = None
+            st.error(f"❌ {str(e)}")
 
 # Display Main Content if Video Processed
 if st.session_state.processed and st.session_state.video_id:

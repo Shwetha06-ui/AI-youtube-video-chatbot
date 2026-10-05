@@ -75,18 +75,21 @@ def get_youtube_transcript(video_id: str) -> str:
         cleaned_text = clean_transcript_text(full_text)
         
         if not cleaned_text:
-            raise Exception("Retrieved transcript is empty.")
+            raise Exception("Transcript is not available for this video. Please try another public video with captions.")
             
         return cleaned_text
 
     except TranscriptsDisabled:
-        raise Exception("Subtitles / Transcripts are disabled for this YouTube video.")
+        raise Exception("Transcript is not available for this video. Please try another public video with captions.")
     except NoTranscriptFound:
-        raise Exception("No transcript found for this video.")
+        raise Exception("Transcript is not available for this video. Please try another public video with captions.")
     except VideoUnavailable:
-        raise Exception("The YouTube video is unavailable, private, or does not exist.")
+        raise Exception("This YouTube video is unavailable, private, or age-restricted. Please try another public video.")
     except Exception as e:
-        raise Exception(f"Failed to extract transcript: {str(e)}")
+        err_msg = str(e).lower()
+        if "too many requests" in err_msg or "429" in err_msg or "blocked" in err_msg:
+            raise Exception("YouTube transcript request was temporarily rate-limited. Please wait a moment or try another video.")
+        raise Exception("Transcript is not available for this video. Please try another public video with captions.")
 
 def clean_transcript_text(text: str) -> str:
     """
