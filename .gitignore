@@ -1,0 +1,24 @@
+# Environment variables
+.env
+.env.local
+
+# Python cache & virtual environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Streamlit config/secrets
+.streamlit/secrets.toml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# FAISS local vector store files (if saved to disk)
+faiss_index/
+*.index
+*.pkl
